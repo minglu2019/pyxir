@@ -352,7 +352,14 @@ def relay_op(op_name, expr, in_xlayers):
     logger.debug("-- op_name: {}".format(op_name))
     logger.debug("-- expr: {}".format(expr.op))
 
-    ty = expr.checked_type
+    try:
+        ty = expr.checked_type
+    except ValueError as e:
+        # TODO, this is not correct
+        if expr.type_args and len(expr.type_args) > 0:
+            ty = expr.type_args[0]
+        else:
+            raise e
     if isinstance(ty, relay.ty.TensorType):
         relay_shape = TensorShape([int(i) for i in list(ty.shape)])
         dtype = str(ty.dtype)
@@ -363,7 +370,7 @@ def relay_op(op_name, expr, in_xlayers):
         dtype = [str(t_ty.dtype) for t_ty in ty.fields]
 
     # TODO
-    relay_shape.set_value(axis=0, value=-1)
+    # relay_shape.set_value(axis=0, value=-1)
 
     attrs = {}
     for attr in dir(expr.attrs):

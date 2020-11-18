@@ -40,8 +40,8 @@ FILE_PATH = os.path.dirname(os.path.realpath(__file__))
 
 
 class DPUCompiler(XGraphBaseCompiler):
-
-    """ TODO """
+    """Wrapper around DPUCADX8G compiler"""
+    
     xgraph_partitioner = XGraphPartitioner()
     xgraph_factory = XGraphFactory()
     tf_generator = TfGenerator()
@@ -104,23 +104,27 @@ class DPUCompiler(XGraphBaseCompiler):
         # netcfg = list(self.netcfgs.values())[0]  # orig pb file
         quant_info_file = list(self.quant_info.values())[0]  # quant info file
 
-        subxg_layers = DPUCompiler.xgraph_partitioner\
-            .get_subgraphs(self.xgraph)[0].subgraph_data
+        Xp = DPUCompiler.xgraph_partitioner\
+            .get_subgraphs(self.xgraph)[0]
+        subxg_layers = Xp.subgraph_data
         xgraph = DPUCompiler.xgraph_factory.build_from_xlayer(subxg_layers)
         net_name = list(self.netcfgs.keys())[0]
-        fs = DPUCompiler.tf_generator.generate(xgraph,
+        fs = DPUCompiler.tf_generator.generate(self.xgraph,
                                                'graph',
                                                subgraphs_only=True,
                                                layout='NHWC',
                                                batch_size=1,
                                                placeholder=True,
-                                               out_dir=self.work_dir)
+                                               out_dir=self.work_dir,
+                                               # kwargs
+                                               compiler_target='DPUv1Compiler')
         netcfg = list(fs.values())[0]
+        import pdb; pdb.set_trace()
 
         input_names = xgraph.get_input_names()
         input_shapes = [xgraph.get(in_name).shapes.tolist()[:]
                         for in_name in input_names]
-        output_names = xgraph.get_output_names()
+        output_names = list(Xp.attrs['__top_tensors'].keys()) # xgraph.get_output_names()
         output_shapes = [xgraph.get(out_name).shapes.tolist()[:]
                          for out_name in output_names]
         if len(input_names) > 1:

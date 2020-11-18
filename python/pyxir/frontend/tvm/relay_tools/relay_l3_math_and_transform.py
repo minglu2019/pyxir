@@ -36,6 +36,54 @@ from .relay_2_xlayer_registry import register_relay_2_xlayer_converter,\
 logger = logging.getLogger("pyxir")
 
 
+@register_relay_2_xlayer_converter_base('arange')
+def arange(op_name, expr, in_xlayers):
+    # type: (str, tvm.relay.expr.Expr, List[XLayer]) -> XLayer
+    """
+    Arange
+
+    Relay
+    -----
+    Type: tvm.relay.arange
+    Ref: https://tvm.apache.org/docs/api/python/relay/index.html#tvm.relay.arange
+    Parameters:
+        - start (tvm.Expr, optional)
+            Start of interval. The interval includes this value. The default start value is 0.
+        - stop (tvm.Expr)
+            Stop of interval. The interval does not include this value.
+        - step (tvm.Expr, optional)
+            Spacing between values. The default step size is 1.
+        - dtype (str, optional)
+            The target data type.
+    """
+    assert len(in_xlayers) in [1, 2, 3]
+
+    if len(in_xlayers) == 1 and 'Constant' in in_xlayers[0].type:
+        newshape = [int(in_xlayers[0].data[0])]
+    elif len(in_xlayers) == 2\
+            and 'Constant' in in_xlayers[0].type\
+            and 'Constant' in in_xlayers[1].type:
+        begin = int(in_xlayers[0].data[0])
+        end = int(in_xlayers[1].data[0])
+        newshape = [end - begin]
+    elif len(in_xlayers) == 3\
+            and 'Constant' in in_xlayers[0].type\
+            and 'Constant' in in_xlayers[1].type\
+            and 'Constant' in in_xlayers[2].type:
+        begin = int(in_xlayers[0].data[0])
+        end = int(in_xlayers[1].data[0])
+        step = float(in_xlayers[2].data[0])
+        newshape = [int((end - begin) / step)]
+    else:
+        newshape = [-1]
+
+    import pdb; pdb.set_trace()
+
+    X = px.ops.any_op(op_name, in_xlayers, any_shape=newshape, relay_id=[hash(expr)])
+
+    return X
+
+
 @register_relay_2_xlayer_converter_base('cast')
 def cast(op_name, expr, in_xlayers):
     # type: (str, tvm.relay.expr.Expr, List[XLayer]) -> XLayer
@@ -108,6 +156,28 @@ def clip(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
 
     # !Important: set input layer tops:
     data_layer.tops.append(op_name)
+
+    return X
+
+
+@register_relay_2_xlayer_converter_base('ones_like')
+def ones_like(op_name, expr, in_xlayers):
+    # type: (str, tvm.relay.expr.Expr, List[XLayer]) -> XLayer
+    """
+    Ones like
+
+    Relay
+    -----
+    Type: tvm.relay.ones_like
+    Ref: https://docs.tvm.ai/api/python/relay/index.html
+    Parameters:
+        - data (relay.Expr)
+            The input data
+    """
+    assert len(in_xlayers) == 1
+    newshape = list(in_xlayers[0].shapes[:])
+
+    X = px.ops.relay_op(op_name, in_xlayers, relay_shape=newshape, relay_id=[hash(expr)])
 
     return X
 
@@ -215,7 +285,7 @@ def reshape(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
         elif dim == -1 and i == 0:
             newshape.append(-1)
         elif dim == -1 and i > 0:
-            newshape.append(int(np.prod(input_shape[j:])))
+            newshape.append(int(np.prod(input_shape[j:]) / np.prod(relayshape[i+1:])))
         elif dim == -2:
             newshape.extend(input_shape[j:])
         elif dim == -3:
@@ -480,5 +550,27 @@ def transpose(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
 
         # !Important: set input layer tops:
         data_layer.tops.append(op_name)
+
+    return X
+
+
+@register_relay_2_xlayer_converter_base('zeros_like')
+def zeros_like(op_name, expr, in_xlayers):
+    # type: (str, tvm.relay.expr.Expr, List[XLayer]) -> XLayer
+    """
+    Zeros like
+
+    Relay
+    -----
+    Type: tvm.relay.zeros_like
+    Ref: https://docs.tvm.ai/api/python/relay/index.html
+    Parameters:
+        - data (relay.Expr)
+            The input data
+    """
+    assert len(in_xlayers) == 1
+    newshape = list(in_xlayers[0].shapes[:])
+
+    X = px.ops.any_op(op_name, in_xlayers, any_shape=newshape, relay_id=[hash(expr)])
 
     return X

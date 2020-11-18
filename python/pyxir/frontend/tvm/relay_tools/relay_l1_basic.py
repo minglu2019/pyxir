@@ -23,12 +23,14 @@ L1: Basic NN operators that enable fully connected multi-layer perceptron
 import math
 import logging
 import numpy as np
+import pyxir as px
 
 import tvm
 
 from pyxir import graph
 from pyxir.graph.layer import xlayer_factory as xlf
 
+from .util import broadcast_shapes
 from .relay_2_xlayer_registry import register_relay_2_xlayer_converter,\
     register_relay_2_xlayer_converter_base
 
@@ -831,5 +833,30 @@ def sqrt(op_name, expr, in_xlayers):
 
     X = xlf.get_xop_factory_func('Sqrt')(op_name, in_xlayers,
                                          relay_id=[hash(expr)])
+
+    return X
+
+
+@register_relay_2_xlayer_converter_base('subtract')
+def subtract(op_name, expr, in_xlayers):
+    # type: (str, tvm.relay.expr.Expr, List[XLayer]) -> XLayer
+    """
+    Suctract
+
+    Relay
+    -----
+    Type: tvm.relay.subtract
+    Ref: https://docs.tvm.ai/api/python/relay/index.html
+    Parameters:
+        - lhs (relay.Expr)
+            The left hand side input data
+        - rhs (relay.Expr)
+            The right hand side input data
+    """
+    lshape = list(in_xlayers[0].shapes[:])
+    rshape = list(in_xlayers[1].shapes[:])
+    shape = broadcast_shapes(lshape, rshape)
+
+    X = px.ops.any_op(op_name, in_xlayers, any_shape=shape, relay_id=[hash(expr)])
 
     return X

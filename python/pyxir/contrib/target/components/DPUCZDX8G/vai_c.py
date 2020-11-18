@@ -83,15 +83,17 @@ class VAICompiler(XGraphBaseCompiler):
         net_name = list(self.netcfgs.keys())[0]
         netcfg = list(self.netcfgs.values())[0]
 
-        subxg_layers = VAICompiler.xgraph_partitioner\
-            .get_subgraphs(self.xgraph)[0].subgraph_data
+        # We only handle one partition at the moment
+        Xp = VAICompiler.xgraph_partitioner\
+            .get_subgraphs(self.xgraph)[0]
+        subxg_layers = Xp.subgraph_data
         xgraph = VAICompiler.xgraph_factory.build_from_xlayer(subxg_layers)
         # assert xgraph.get_name() == net_name
-
+        import pdb; pdb.set_trace()
         input_names = xgraph.get_input_names()
         input_shapes = [xgraph.get(in_name).shapes[:]
                         for in_name in input_names]
-        output_names = xgraph.get_output_names()
+        output_names = list(Xp.attrs['__top_tensors'].keys()) # xgraph.get_output_names()
         output_shapes = [xgraph.get(out_name).shapes[:]
                          for out_name in output_names]
 

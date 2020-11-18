@@ -509,7 +509,7 @@ def build_online_quant_rt_opaque_func(xgraph: XGraph,
                                     it.to_numpy(copy=True)],
                                    axis=0)
             else:
-                calibration_inputs[in_name] = it.to_numpy(copy=True)
+                calibration_inputs[in_name] = it.to_numpy(copy=True)     
 
         # Run on inputs
         inputs = {it_name: it.to_numpy()

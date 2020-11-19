@@ -34,7 +34,7 @@ DpuFunc::DpuFunc(XLayerHolder &xl, const std::string &build_dir) : KernelFunc(xl
   
   in_tensor_names_ = dpu_internal_in_tensor_names;
 
-  std::vector<std::string> dpu_out_tensor_names = xl->tops;
+  std::vector<std::string> dpu_out_tensor_names = xl->get_attr("output_names").get_strings(); // xl->tops;
   out_tensor_names_ = dpu_out_tensor_names;
   
   std::unordered_map<std::string, std::string> rt_in_map = 
@@ -106,11 +106,11 @@ DpuFunc::DpuFunc(XLayerHolder &xl, const std::string &build_dir) : KernelFunc(xl
     }
   }
 
-  std::vector<std::string> rt_out_names;
-  std::transform(out_tensor_names_.begin(), out_tensor_names_.end(),
-   std::back_inserter(rt_out_names),
-   [&rt_out_map](const std::string &elem)
-   -> const std::string & { return rt_out_map[elem]; });
+  std::vector<std::string> rt_out_names = out_tensor_names_;
+//   std::transform(out_tensor_names_.begin(), out_tensor_names_.end(),
+//    std::back_inserter(rt_out_names),
+//    [&rt_out_map](const std::string &elem)
+//    -> const std::string & { return rt_out_map[elem]; });
 
   for (int i = 0; i < out_tensor_names_.size(); ++i)
   {
@@ -139,7 +139,7 @@ void DpuFunc::operator()(
   std::vector<XBufferHolder> &in_tensors,
   std::vector<XBufferHolder> &out_tensors)
 {
-  pxDebug("Inside VaiComputeFunc::()");
+  pxDebug("Inside DpuFunc::()");
   if (out_tensors.empty()) {
     for (const auto &shape : xl_->shapes) {
       std::vector<ssize_t> buffer_shape = shape;
@@ -155,8 +155,8 @@ void DpuFunc::operator()(
 
   for (ssize_t i = 0; i < in_tensor_names_.size(); ++i)
   {
-    std::vector<std::int32_t> in_dims(in_tensors[i]->shape.begin(),
-                                      in_tensors[i]->shape.end());
+    std::vector<std::int32_t> in_dims(in_tensors[in_tensor_order_[i]]->shape.begin(),
+                                      in_tensors[in_tensor_order_[i]]->shape.end());
     batch_tensors.push_back(std::shared_ptr<vitis::ai::Tensor>(
         new vitis::ai::Tensor(dpu_runner_in_tensors_[i]->get_name(), in_dims,
                               dpu_runner_in_tensors_[i]->get_data_type())));
@@ -169,8 +169,8 @@ void DpuFunc::operator()(
 
   for (ssize_t i = 0; i < out_tensor_names_.size(); ++i)
   {
-    std::vector<std::int32_t> out_dims(out_tensors[i]->shape.begin(),
-                                       out_tensors[i]->shape.end());
+    std::vector<std::int32_t> out_dims(out_tensors[out_tensor_order_[i]]->shape.begin(),
+                                       out_tensors[out_tensor_order_[i]]->shape.end());
     batch_tensors.push_back(std::shared_ptr<vitis::ai::Tensor>(
         new vitis::ai::Tensor(dpu_runner_out_tensors_[i]->get_name(), out_dims,
                               dpu_runner_out_tensors_[i]->get_data_type())));

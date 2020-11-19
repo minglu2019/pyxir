@@ -90,7 +90,7 @@ class DNNCOutput(BaseDNNCOutput):
                         raise ValueError("DNNC compiler cannot handle multiple"
                                          " inputs with the same shape")
 
-                    d['Boundary Input Tensors'][shape] = name[:-5]
+                    d['Boundary Input Tensors'][shape] = name.split(":")[0]
             elif split_line[0] == 'Boundary Output Tensor(s)   (H*W*C)':
                 for i in range(idx + 1, len(lines)):
                     split_line_i = lines[i].lstrip().rstrip().split(" : ")
@@ -104,7 +104,7 @@ class DNNCOutput(BaseDNNCOutput):
                         raise ValueError("DNNC compiler cannot handle multiple"
                                          " outputs with the same shape")
 
-                    d['Boundary Output Tensors'][shape] = name[:-5]
+                    d['Boundary Output Tensors'][shape] = name.split(":")[0]
             elif split_line[0] == 'Total Node Count':
                 d['Total Node Count'] = split_line[1]
             elif split_line[0] in ['Input Node(s)   (H*W*C)',

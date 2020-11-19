@@ -191,6 +191,8 @@ class VAICompiler(XGraphBaseCompiler):
         with open(to_meta_file, 'w') as f:
             json.dump(self.meta, f)
 
+        import pdb; pdb.set_trace()
+
         self.c_output.add(net_name, [to_lib_file], in_map, out_map)
 
         self.xgraph.set_compiler_output(self.c_output)

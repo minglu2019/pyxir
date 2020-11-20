@@ -224,7 +224,7 @@ def nn_batch_norm(expr, params, schedule, net, op_idx, RELAY_2_XLAYER,
                                                          RELAY_2_XLAYER,
                                                          **kwargs)
 
-    logger.debug("nn_batch_norm: {}".format(""))
+    logger.debug("nn_batch_norm: {}".format(str(hash(expr))))
 
     # Update schedule with input data layer
     if data_expr not in net:

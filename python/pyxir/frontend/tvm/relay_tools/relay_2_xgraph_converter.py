@@ -13,11 +13,7 @@
 # limitations under the License.
 
 
-"""
-Module for transforming TVM Relay expression to XGraph representation
-
-
-"""
+"""Module for transforming TVM Relay expression to XGraph representation"""
 
 import logging
 
@@ -32,6 +28,24 @@ from .relay_2_xlayer_registry import Relay2XLayerRegistry
 
 fancy_logger = fancy_logging.getLogger("pyxir")
 logger = logging.getLogger('pyxir')
+
+
+class Schedule(object):
+
+    def __init__(self, netmap):
+        self.netmap = netmap
+        self.schedule = []
+
+    def append(self, value):
+        self.schedule.append(value)
+
+    def __contains__(self, value):
+        return value in self.schedule
+
+    def __iter__(self):
+        for e in self.schedule:
+            yield e
+
 
 
 class Relay2XGraphConverter(BaseConverter):
@@ -82,8 +96,9 @@ class Relay2XGraphConverter(BaseConverter):
 
         fancy_logger.banner("RELAY IR TO PYXIR")
 
-        schedule = []
+        # schedule = []
         net = {}
+        schedule = Schedule(net)
         # CONVERT RELAY EXPRESSION TO XLAYER GRAPH
         # This starts a rescursive expression to graph conversion function
         X = Relay2XGraphConverter.RELAY_2_XLAYER[sym.__class__.__name__](
@@ -118,7 +133,9 @@ class Relay2XGraphConverter(BaseConverter):
             net[X.name] = X
 
         # Possibly replace Input layers with CvxInput layers
-        xlayers = [net[op_id] for op_id in net]
+        xlayers = [net[op_id] for op_id in schedule]
+
+        import pdb; pdb.set_trace()
 
         xgraph = self.xgraph_factory.build_from_xlayer(
             net=xlayers,

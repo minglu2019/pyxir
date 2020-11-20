@@ -139,8 +139,6 @@ def clip(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
                                                  net, op_idx, RELAY_2_XLAYER,
                                                  **kwargs)
 
-    logger.debug("clip: {}".format(""))
-
     # Update schedule with input data layer
     if data_expr not in net:
         schedule.append(data_expr)
@@ -148,6 +146,7 @@ def clip(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
 
     # Create XLayer
     op_name = 'clip-' + str(hash(expr))
+    logger.debug("clip: {}".format(op_name))
 
     X = xlf.get_xop_factory_func('Clip')(op_name, data_layer,
                                          a_min, a_max,

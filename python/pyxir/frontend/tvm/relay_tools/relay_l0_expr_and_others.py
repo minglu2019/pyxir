@@ -303,7 +303,8 @@ def constant(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
     value = expr.data
     if isinstance(value, tvm.nd.NDArray):
         value = value.asnumpy()
-    # dtype = str(expr._checked_type_.dtype)
+    if value.ndim == 0:
+        value = value.reshape((-1,))
 
     # Create name
     op_name = 'constant-' + str(hash(expr))

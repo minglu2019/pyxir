@@ -130,26 +130,31 @@ class VAICompiler(XGraphBaseCompiler):
 
             dpu_input_nodes = do.get_input_nodes()
             dpu_output_nodes = do.get_output_nodes()
+            dpu_output_nodes_on_shapes = do.get_output_nodes_on_shapes()
 
             in_shapes_log = ["{}*{}*{}".format(ishape[1], ishape[2], ishape[3])
                              for ishape in input_shapes]
             out_shapes_log = ["{}*{}*{}".format(os[1], os[2], os[3])
                               for os in output_shapes]
 
-            in_map = {
-                in_name: in_name + ':0'  # Tensorflow -> add :0
-                # in_name: dpu_input_nodes[in_shape_str]
-                for in_name, in_shape_str in
-                zip(input_names, in_shapes_log)
-            }
-            out_map = {
-                out_name: dpu_output_nodes[out_shape_str] + ':0'
-                for out_name, out_shape_str in
-                zip(output_names, out_shapes_log)
-            }
+            in_map = {in_name: in_name + ':0' for in_name, _ in zip(input_names, in_shapes_log)}
+            out_map = {}
 
-            logger.debug("in_map: {}".format(in_map))
-            logger.debug("out_map: {}".format(out_map))
+            import pdb; pdb.set_trace()
+
+            for out_name, out_shape_str in zip(output_names, out_shapes_log):
+                # DNNC changes naming
+                dnnc_out_name = do.get_dnnc_str(out_name)
+                if dnnc_out_name in dpu_output_nodes:
+                    out_map[out_name] = dpu_output_nodes[dnnc_out_name]
+                # out_name: dpu_output_nodes[out_shape_str] + ':0'
+                else:
+                    assert len(dpu_output_nodes_on_shapes) == len(output_names),\
+                        "Can't retrieve right out tensor names from DNNC compiler output"
+                    out_map[out_name] = dpu_output_nodes_on_shapes[out_shape_str]
+
+            logger.info("DPU kernel in_map: {}".format(in_map))
+            logger.info("DPU kernel out_map: {}".format(out_map))
 
         if error is not None:
             error = error.decode('utf-8')

@@ -16,8 +16,6 @@
 Module for transforming Relay L1 operators to XLayer objects
 
 L1: Basic NN operators that enable fully connected multi-layer perceptron
-
-
 """
 
 import math
@@ -81,7 +79,7 @@ def add(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
         schedule.append(rhs_expr)
         net[rhs_expr] = rhs_layer
 
-    logger.debug("add: {}".format(""))
+    logger.debug("add: {}".format(hash(expr)))
     logger.debug("-- lhs: {}, {}, {}, {}".format(
         expr.args[0].__class__.__name__, lhs_layer.type,
         lhs_layer.name, lhs_layer.shapes))
@@ -92,12 +90,16 @@ def add(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
     def get_add_const_layer(in_layer, const_layer):
 
         # Numpy style broadcasting == NHWC
-        const_ndim = const_layer.data[0].ndim
-        if const_ndim == 1:
+        data = const_layer.data[0]
+        const_ndim = data.ndim
+        if const_ndim in [0, 1]:
+            if const_ndim == 0:
+                data = data.reshape((-1,))
+            
             # Create name
             op_name = 'nn_bias_add-' + str(hash(expr))
 
-            const_size = const_layer.data[0].shape[0]
+            const_size = data.shape[0]
             in_shape = in_layer.shapes
             # Retrieve axis according to numpy broadcasting rules
             axis = [i for i in range(len(in_shape)-1, -1, -1)
@@ -348,7 +350,7 @@ def concatenate(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
 
     axis = int(expr.attrs.axis)
     # logger.debug(expr.args[0].__class__.__name__)
-    logger.debug("Concatenate")
+    logger.debug("Concatenate: {}".format(hash(expr)))
 
     data_layers = []
     relay_idx = []
@@ -369,9 +371,10 @@ def concatenate(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
     data_layer_types = [dl.type[0] for dl in data_layers]
     if len(set(data_layer_types)) == 1 and 'Constant' in data_layer_types:
         # Concatenate all constants TODO
-        raise NotImplementedError("")
-    elif 'Constant' in data_layer_types:
-        raise NotImplementedError("")
+        raise NotImplementedError("Cannot concatenate all constant layers")
+    # elif 'Constant' in data_layer_types:
+    #     raise NotImplementedError("Cannot concatenate data layers with type: {}"\
+    #         .format(data_layer_types))
 
     # Create XLayer
     op_name = 'concat-' + str(hash(expr))

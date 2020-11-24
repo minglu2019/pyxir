@@ -135,8 +135,6 @@ class Relay2XGraphConverter(BaseConverter):
         # Possibly replace Input layers with CvxInput layers
         xlayers = [net[op_id] for op_id in schedule]
 
-        import pdb; pdb.set_trace()
-
         xgraph = self.xgraph_factory.build_from_xlayer(
             net=xlayers,
             name='relay_xgraph',

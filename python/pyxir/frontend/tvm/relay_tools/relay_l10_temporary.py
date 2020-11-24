@@ -16,8 +16,6 @@
 Module for transforming Relay L5 operators to XLayer objects
 
 L5: Vision operators
-
-
 """
 
 import math
@@ -71,6 +69,8 @@ def nn_adaptive_avg_pool2d(op_name, expr, in_xlayers):
 
     if output_size is None:
         out_h, out_w = in_h, in_w
+    elif len(output_size) == 1:
+        out_h, out_w = output_size[0], output_size[0]
     else:
         out_h, out_w = output_size
 

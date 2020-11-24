@@ -77,8 +77,6 @@ def arange(op_name, expr, in_xlayers):
     else:
         newshape = [-1]
 
-    import pdb; pdb.set_trace()
-
     X = px.ops.any_op(op_name, in_xlayers, any_shape=newshape, relay_id=[hash(expr)])
 
     return X
@@ -237,6 +235,40 @@ def nn_prelu(op_name, expr, in_xlayers):
     return X
 
 
+@register_relay_2_xlayer_converter_base('repeat')
+def repeat(op_name, expr, in_xlayers):
+    # type: (str, tvm.relay.expr.Expr, List[XLayer]) -> XLayer
+    """
+    TVM: Repeats elements of an array. By default, repeat flattens the
+    input array into 1-D and then repeats the elements.
+
+    Relay
+    -----
+    Type: tvm.relay.repeat
+    Ref: https://docs.tvm.ai/api/python/relay/index.html
+    Parameters:
+        - data (relay.Expr)
+            The input
+        - repeats (int)
+            The number of repetitions for each element.
+        - Axis (int)
+            The axis along which to repeat values. The negative numbers are
+            interpreted counting from the backward. By default, use the flattened
+            input array, and return a flat output array.
+    """
+    repeats = int(expr.attrs.repeats)
+    axis = int(expr.attrs.axis) if expr.attrs.axis else None
+    in_shape = list(in_xlayers[0].shapes[:])
+
+    if axis is None or axis == 0:
+        shape = [int(np.prod(in_shape)) * repeats]
+    else:
+        shape[axis] = in_shape[axis] * repeats
+
+    X = px.ops.any_op(op_name, in_xlayers, any_shape=shape, relay_id=[hash(expr)])
+
+    return X
+
 @register_relay_2_xlayer_converter('reshape')
 def reshape(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
     # type: (tvm.relay.expr.Expr, Dict[str, numpy.ndarray], List[Expr],
@@ -280,10 +312,10 @@ def reshape(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
         if dim > 0:
             newshape.append(dim)
         elif dim == 0:
-            newshape.append(input_shape[i])
-        elif dim == -1 and i == 0:
+            newshape.append(input_shape[j])
+        elif dim == -1 and i == 0 and input_shape[0] == -1:
             newshape.append(-1)
-        elif dim == -1 and i > 0:
+        elif dim == -1:
             newshape.append(int(np.prod(input_shape[j:]) / np.prod(relayshape[i+1:])))
         elif dim == -2:
             newshape.extend(input_shape[j:])
@@ -302,7 +334,7 @@ def reshape(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
             elif nxtnxt == -1:
                 nxtnxt = input_shape[j] / nxt
             assert(input_shape[j] == nxt * nxtnxt)
-            newshape.extend([nxt, nxtnxt])
+            newshape.extend([int(nxt), int(nxtnxt)])
             i += 2
         else:
             raise ValueError("Only integers greater or equal to -4 are allowed"
@@ -319,7 +351,9 @@ def reshape(expr, params, schedule, net, op_idx, RELAY_2_XLAYER, **kwargs):
         assert abs(np.prod(list(data_layer.shapes))) % np.prod(newshape) == 0
         newshape[0] = -1
     else:
-        assert np.prod(list(data_layer.shapes)) == np.prod(newshape)
+        assert np.prod(list(data_layer.shapes)) == np.prod(newshape),\
+            "Incompatible shapes for: input shape is: {} and target shape is: {}"\
+            .format(list(data_layer.shapes), newshape)
 
     # Create XLayer
     # Create name
